@@ -1,28 +1,57 @@
 #include "order_manager.h"
 
+#include <cstdio>
 #include <iostream>
 
 #include <drogon/drogon.h>
-#include <openssl/sha.h>
 
 OrderManager::OrderManager(TokenManager& token_manager)
-    : m_client(drogon::HttpClient::newHttpClient(BASE_URL)), m_token_manager(token_manager)
+    : m_client(drogon::HttpClient::newHttpClient(BASE_URL)),
+      m_token_manager(token_manager),
+      m_api_credentials("api_key.txt", "api_secret.txt")
 {
 }
 
-bool OrderManager::PlaceOrder(const std::string& instrument_name, const double& amount,
-                              const std::string& label, const std::string& type, std::string& response) const
+bool OrderManager::RefreshTokenIfNeeded() const
 {
-    // Check if the access token is still valid
     if (m_token_manager.IsAccessTokenExpired())
     {
         std::cerr << "Access token expired. Refreshing...\n";
         // Refresh the token
-        if (!m_token_manager.RefreshAccessToken("YOUR_CLIENT_ID", "YOUR_CLIENT_SECRET"))
+        if (!m_token_manager.RefreshAccessToken(m_api_credentials.GetApiKey(),
+                                                m_api_credentials.GetApiSecret()))
         {
             std::cerr << "Failed to refresh token. Cannot place order.\n";
             return false;
         }
+    }
+    return true;
+}
+
+std::string OrderManager::GetOrderTypeString(const OrderType& type)
+{
+    switch (type)
+    {
+        case OrderType::LIMIT:
+            return "limit";
+        case OrderType::MARKET:
+            return "market";
+        case OrderType::STOP_LIMIT:
+            return "stop_limit";
+        case OrderType::STOP_MARKET:
+            return "stop_market";
+        default:
+            return "limit";
+    }
+}
+
+bool OrderManager::PlaceOrder(const OrderParams& params, const std::string& side, std::string& response) const
+{
+    std::ios_base::sync_with_stdio(false);
+
+    if (!RefreshTokenIfNeeded())
+    {
+        return false;
     }
 
     // Use the valid access token
@@ -30,54 +59,269 @@ bool OrderManager::PlaceOrder(const std::string& instrument_name, const double& 
 
     // Create the request
     const auto req = drogon::HttpRequest::newHttpRequest();
+
+    // Set the request parameters
+    side == "buy" ? req->setPath("/api/v2/private/buy") : req->setPath("/api/v2/private/sell");
+
+    // Set the request method
     req->setMethod(drogon::Get);
-    req->setPath(API_PATH);
 
-    const std::string url_params = "?amount=" + std::to_string(amount) +
-                                   "&instrument_name=" + instrument_name + "&label=" + label +
-                                   "&type=" + type;
+    // Use sprintf for faster string formatting - avoid string concatenation
+    char buffer[BUFFER_SIZE];
+    int written;
 
-    req->setPath(req->path() + url_params);
+    if (params.type == OrderType::LIMIT)
+    {
+        written =
+            snprintf(buffer, BUFFER_SIZE, "%s?amount=%.6f&instrument_name=%s&label=%s&price=%.2f&type=%s",
+                     req->getPath().c_str(), params.amount, params.instrument_name.c_str(),
+                     params.label.c_str(), params.price, GetOrderTypeString(params.type).c_str());
+    }
+    else if (params.type == OrderType::MARKET)
+    {
+        written = snprintf(buffer, BUFFER_SIZE, "%s?amount=%.6f&instrument_name=%s&label=%s&type=%s",
+                           req->getPath().c_str(), params.amount, params.instrument_name.c_str(),
+                           params.label.c_str(), GetOrderTypeString(params.type).c_str());
+    }
+    else
+    {
+        std::cerr << "Unsupported order type.\n";
+        return false;
+    }
+
+    if (written < 0 || written >= BUFFER_SIZE)
+    {
+        std::cerr << "Buffer overflow in request formatting\n";
+        return false;
+    }
+
+    // Set path using string_view to avoid copies
+    const std::string path(buffer, written);
+    req->setPath(path);
+    const std::string m_auth_prefix{"Bearer "};
+    // Get token and set auth header - minimize string operations
+    req->addHeader("Authorization", m_auth_prefix + access_token);
+    req->addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    //std::cout << "Request path: " << req->path() << "\n";
+    //std::cout << "Auth header: " << m_auth_prefix + access_token << "\n";
+    //std::cout << "2. Sending request to: " << req->path() << "\nHeaders:\n";
+    m_client->sendRequest(
+        req,
+        [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
+        {
+            //std::cout << "3. Response received!\n";
+            if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
+            {
+                //std::cout << "4. Success! Body length: " << http_response->body().length() << "\n";
+                //std::cout << "Response: " << std::string{http_response->getBody()} << "\n";
+                response = http_response->body();
+            }
+            else
+            {
+                std::cout << "4. Failed! Status: " << (http_response ? http_response->getStatusCode() : 0)
+                          << '\n';
+                response = "Failed to place order";
+            }
+            //std::cout << "5. Quitting app...\n";
+            drogon::app().quit();
+        });
+    // Wait for the request to complete
+
+    std::cout << "6. About to run event loop...\n";
+    drogon::app().run();
+    std::cout << "7. Event loop finished\n";
+
+    return true;
+}
+
+bool OrderManager::CancelOrder(const std::string& order_id, std::string& response) const
+{
+    if (!RefreshTokenIfNeeded())
+    {
+        return false;
+    }
+
+    const std::string access_token = m_token_manager.GetAccessToken();
+    const auto req = drogon::HttpRequest::newHttpRequest();
+
+    // Set the request method
+    req->setMethod(drogon::Get);
+
+    // Buffer to store the request body
+    char buffer[BUFFER_SIZE];
+
+    // Use sprintf to format the order_id parameter
+    const int written = snprintf(buffer, BUFFER_SIZE, "/api/v2/private/cancel?order_id=%s", order_id.c_str());
+
+    if (written < 0 || written >= BUFFER_SIZE)
+    {
+        std::cerr << "Buffer overflow or error in sprintf.\n";
+        return false;
+    }
+
+    // Set the request body and headers
+    req->setPath(std::string(buffer, written));
+
+    // Add the authorization header with the Bearer token
     req->addHeader("Authorization", "Bearer " + access_token);
-    //req->addHeader("Content-Type", "application/json");
-
-    std::cout << "Sending request to: " << req->path() << "\n";
-
-    // Variables to wait for response
-    std::mutex mtx;
-    std::condition_variable cv;
-    bool request_done = false;
+    req->addHeader("Content-Type", "application/json");
 
     // Send the request
     m_client->sendRequest(
         req,
         [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
         {
-            std::lock_guard lock(mtx);
-
-            std::cout << "Callback triggered.\n";
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
-                std::cout << "Order placed successfully!\n";
                 response = http_response->body();
             }
             else
             {
-                std::cerr << "Failed to place the order. HTTP Status Code: " << http_response->getStatusCode()
+                std::cerr << "HTTP Status Code: " << (http_response ? http_response->getStatusCode() : 0)
                           << '\n';
-                response = "Failed to place order";
+                std::cerr << "Response Body: " << (http_response ? http_response->body() : "No response body")
+                          << '\n';
+                response = "Failed to cancel order";
             }
-            request_done = true;
-            cv.notify_one();
+            drogon::app().quit();
         });
-    // Wait for the request to complete
-    std::unique_lock lock(mtx);
-    std::cout << "Waiting for request completion...\n";  // Add log to track waiting
-    cv.wait(lock,
-            [&]
+    drogon::app().run();
+    return true;
+}
+
+bool OrderManager::ModifyOrder(const std::string& order_id, const double& new_amount, const double& new_price,
+                               std::string& response) const
+{
+    if (!RefreshTokenIfNeeded())
+    {
+        return false;
+    }
+
+    const std::string access_token = m_token_manager.GetAccessToken();
+    const auto req = drogon::HttpRequest::newHttpRequest();
+
+    // Set the request method to GET
+    req->setMethod(drogon::Get);
+
+    char buffer[BUFFER_SIZE];
+
+    // Use sprintf to format the URL with parameters
+    const int written =
+        snprintf(buffer, BUFFER_SIZE, "/api/v2/private/edit?order_id=%s&amount=%.6f&price=%.2f",
+                 order_id.c_str(), new_amount, new_price);
+
+    if (written < 0 || written >= BUFFER_SIZE)
+    {
+        std::cerr << "Buffer overflow or error in sprintf.\n";
+        return false;
+    }
+
+    // Set the formatted path
+    req->setPath(std::string(buffer, written));
+
+    // Add headers
+    req->addHeader("Authorization", "Bearer " + access_token);
+    req->addHeader("Content-Type", "application/json");
+
+    // Send the request
+    m_client->sendRequest(
+        req,
+        [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
+        {
+            if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
-                return request_done;
-            });
-    std::cout << "Request completed.\n";
+                response = http_response->body();
+            }
+            else
+            {
+                std::cerr << "HTTP Status Code: " << (http_response ? http_response->getStatusCode() : 0)
+                          << '\n';
+                std::cerr << "Response Body: " << (http_response ? http_response->body() : "No response body")
+                          << '\n';
+                response = "Failed to modify order";
+            }
+            drogon::app().quit();
+        });
+
+    drogon::app().run();
+    return true;
+}
+
+bool OrderManager::GetOrderBook(const std::string& instrument_name, std::string& response) const
+{
+    const auto req = drogon::HttpRequest::newHttpRequest();
+
+    // Set the HTTP method and path with instrument_name as a query parameter
+    req->setMethod(drogon::Get);
+    req->setPath("/api/v2/public/get_order_book?instrument_name=" + instrument_name);
+
+    // Send the request
+    m_client->sendRequest(
+        req,
+        [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
+        {
+            if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
+            {
+                response = http_response->body();
+            }
+            else
+            {
+                std::cerr << "Failed to get Order Book.\n";
+                response = "Failed to get Order Book";
+            }
+            drogon::app().quit();
+        });
+
+    // Run the event loop
+    drogon::app().run();
+    return true;
+}
+
+bool OrderManager::GetCurrentPositions(const std::string& currency, const std::string& kind,
+                                       std::string& response) const
+{
+    if (!RefreshTokenIfNeeded())
+    {
+        return false;
+    }
+
+    const std::string access_token = m_token_manager.GetAccessToken();
+    const auto req = drogon::HttpRequest::newHttpRequest();
+
+    // Set the HTTP method and path, including optional parameters for currency and kind
+    req->setMethod(drogon::Get);
+
+    // Format the path based on parameters
+    std::string path = "/api/v2/private/get_positions?currency=" + currency;
+    if (!kind.empty())
+    {
+        path += "&kind=" + kind;
+    }
+    req->setPath(path);
+
+    // Add the authorization header with Bearer token
+    req->addHeader("Authorization", "Bearer " + access_token);
+    req->addHeader("Content-Type", "application/json");
+
+    // Send the request
+    m_client->sendRequest(
+        req,
+        [&](drogon::ReqResult result, const drogon::HttpResponsePtr& http_response)
+        {
+            if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
+            {
+                response = http_response->body();
+            }
+            else
+            {
+                std::cerr << "Failed to get positions.\n";
+                response = "Failed to get positions";
+            }
+            drogon::app().quit();
+        });
+
+    // Run the event loop
+    drogon::app().run();
     return true;
 }

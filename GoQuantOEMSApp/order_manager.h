@@ -5,6 +5,7 @@
 
 #include <drogon/HttpClient.h>
 
+#include "api_credentials.h"
 #include "token_manager.h"
 
 enum class OrderType
@@ -38,16 +39,24 @@ struct OrderParams
 class OrderManager
 {
   private:
+    static constexpr size_t BUFFER_SIZE = 2048;
     static constexpr const char* BASE_URL = "https://test.deribit.com";
-    static constexpr const char* API_PATH = "/api/v2/private/buy";
-    static constexpr std::chrono::milliseconds TIMEOUT{1000};  // 1 second timeout
-
+    static constexpr const char* API_PATH = "/api/v2/private/";
     std::shared_ptr<drogon::HttpClient> m_client;
     TokenManager& m_token_manager;
+    ApiCredentials m_api_credentials;
 
   public:
     OrderManager(TokenManager& token_manager);
+    bool RefreshTokenIfNeeded() const;
 
-    bool PlaceOrder(const std::string& instrument_name, const double& amount, const std::string& label,
-                    const std::string& type, std::string& response) const;
+    static std::string GetOrderTypeString(const OrderType& type);
+
+    bool PlaceOrder(const OrderParams& params, const std::string& side, std::string& response) const;
+    bool CancelOrder(const std::string& order_id, std::string& response) const;
+    bool ModifyOrder(const std::string& order_id, const double& new_amount, const double& new_price,
+                     std::string& response) const;
+    bool GetOrderBook(const std::string& instrument_name, std::string& response) const;
+    bool GetCurrentPositions(const std::string& currency, const std::string& kind,
+                             std::string& response) const;
 };
