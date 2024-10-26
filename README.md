@@ -136,8 +136,8 @@ order_manager.GetOpenOrders(response);
 ws_client->ConnectToServer("ETH-PERPETUAL");
 ```
 ## Environment Variables
-API_KEY: Your Deribit API key.
-SECRET_KEY: Your Deribit API secret key.
+- API_KEY: Your Deribit API key.
+- SECRET_KEY: Your Deribit API secret key.
 
 ## Error Handling
 The application handles various errors, such as failed order placements or WebSocket reconnections. Errors are logged and printed to the console.
