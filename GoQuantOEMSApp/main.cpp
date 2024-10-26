@@ -37,7 +37,7 @@ int main()
 
         // Modify and cancel orders
         order_manager.ModifyOrder("ETH-14308636889", 4.0, 2200.0, response);
-        order_manager.CancelOrder("ETH-14320504994", response);
+        order_manager.CancelOrder("ETH-14323480383", response);
 
         // Get order book, positions, and open orders
         order_manager.GetOrderBook("ETH-PERPETUAL", response);

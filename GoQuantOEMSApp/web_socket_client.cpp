@@ -15,7 +15,8 @@ DrogonWebSocket::~DrogonWebSocket()
     }
 }
 
-std::string DrogonWebSocket::getFormattedTimestamp()
+// Function to get the current timestamp in HH:MM:SS.mmm format
+std::string DrogonWebSocket::GetFormattedTimestamp()
 {
     const auto now = std::chrono::system_clock::now();
     const auto now_time = std::chrono::system_clock::to_time_t(now);
@@ -32,13 +33,14 @@ std::string DrogonWebSocket::getFormattedTimestamp()
     return ss.str();
 }
 
+// Function to connect to the WebSocket server and subscribe to a symbol
 void DrogonWebSocket::ConnectToServer(const std::string& symbol)
 {
     ws_symbol = symbol;
 
     try
     {
-        std::cout << getFormattedTimestamp() << " Connecting to Deribit WebSocket...\n";
+        std::cout << GetFormattedTimestamp() << " Connecting to Deribit WebSocket...\n";
 
         const auto req = drogon::HttpRequest::newHttpRequest();
         req->setPath("/ws/api/v2");
@@ -60,12 +62,12 @@ void DrogonWebSocket::ConnectToServer(const std::string& symbol)
             if (result == drogon::ReqResult::Ok)
             {
                 is_connected = true;
-                std::cout << getFormattedTimestamp() << " Connected!\n";
+                std::cout << GetFormattedTimestamp() << " Connected!\n";
                 SubscribeToSymbol(symbol);
             }
             else
             {
-                std::cerr << getFormattedTimestamp()
+                std::cerr << GetFormattedTimestamp()
                           << " Failed to connect: " << (resp ? std::to_string(resp->getStatusCode()) : "N/A")
                           << "\n";
             }
@@ -75,10 +77,11 @@ void DrogonWebSocket::ConnectToServer(const std::string& symbol)
     }
     catch (const std::exception& e)
     {
-        std::cerr << getFormattedTimestamp() << " Exception: " << e.what() << "\n";
+        std::cerr << GetFormattedTimestamp() << " Exception: " << e.what() << "\n";
     }
 }
 
+// Function to subscribe to a symbol on the WebSocket server
 void DrogonWebSocket::SubscribeToSymbol(const std::string& symbol)
 {
     try
@@ -94,14 +97,15 @@ void DrogonWebSocket::SubscribeToSymbol(const std::string& symbol)
         const std::string msg_str = Json::writeString(writer, msg);
         const drogon::WebSocketConnectionPtr& ws_conn = ws_client->getConnection();
         ws_conn->send(msg_str);
-        std::cout << getFormattedTimestamp() << " Subscription request sent for: " << symbol << "\n";
+        std::cout << GetFormattedTimestamp() << " Subscription request sent for: " << symbol << "\n";
     }
     catch (const std::exception& e)
     {
-        std::cerr << getFormattedTimestamp() << " Exception during subscription: " << e.what() << "\n";
+        std::cerr << GetFormattedTimestamp() << " Exception during subscription: " << e.what() << "\n";
     }
 }
 
+// Function to handle incoming messages from the WebSocket server
 void DrogonWebSocket::HandleMessage(std::string&& msg, const drogon::WebSocketClientPtr& ws_ptr,
                                     const drogon::WebSocketMessageType& type)
 {
@@ -121,18 +125,18 @@ void DrogonWebSocket::HandleMessage(std::string&& msg, const drogon::WebSocketCl
                     const auto& params = json_data["params"];
                     if (params.isMember("channel") && params.isMember("data"))
                     {
-                        std::cout << getFormattedTimestamp() << " " << params["channel"].asString() << "\n";
+                        std::cout << GetFormattedTimestamp() << " " << params["channel"].asString() << "\n";
                     }
                 }
             }
             else
             {
-                std::cerr << getFormattedTimestamp() << " Failed to parse message: " << errs << "\n";
+                std::cerr << GetFormattedTimestamp() << " Failed to parse message: " << errs << "\n";
             }
         }
     }
     catch (const std::exception& e)
     {
-        std::cerr << getFormattedTimestamp() << " Exception processing message: " << e.what() << "\n";
+        std::cerr << GetFormattedTimestamp() << " Exception processing message: " << e.what() << "\n";
     }
 }

@@ -12,7 +12,7 @@ class DrogonWebSocket
     std::string ws_symbol;
     bool is_connected{false};
 
-    static std::string getFormattedTimestamp();
+    static std::string GetFormattedTimestamp();
     void SubscribeToSymbol(const std::string& symbol);
     void HandleMessage(std::string&& msg, const drogon::WebSocketClientPtr& ws_ptr,
                        const drogon::WebSocketMessageType& type);

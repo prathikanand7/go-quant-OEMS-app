@@ -30,6 +30,7 @@ bool OrderManager::RefreshTokenIfNeeded() const
     return true;
 }
 
+// Function to get the string representation of the OrderType enum
 std::string OrderManager::GetOrderTypeString(const OrderType& type)
 {
     switch (type)
@@ -47,6 +48,7 @@ std::string OrderManager::GetOrderTypeString(const OrderType& type)
     }
 }
 
+// Function to place an order using the Deribit API
 bool OrderManager::PlaceOrder(const OrderParams& params, const std::string& side, std::string& response) const
 {
     std::ios_base::sync_with_stdio(false);
@@ -128,6 +130,7 @@ bool OrderManager::PlaceOrder(const OrderParams& params, const std::string& side
     return true;
 }
 
+// Function to cancel an order using the Deribit API
 bool OrderManager::CancelOrder(const std::string& order_id, std::string& response) const
 {
     if (!RefreshTokenIfNeeded())
@@ -182,6 +185,7 @@ bool OrderManager::CancelOrder(const std::string& order_id, std::string& respons
     return true;
 }
 
+// Function to modify an order using the Deribit API
 bool OrderManager::ModifyOrder(const std::string& order_id, const double& new_amount, const double& new_price,
                                std::string& response) const
 {
@@ -239,6 +243,7 @@ bool OrderManager::ModifyOrder(const std::string& order_id, const double& new_am
     return true;
 }
 
+// Function to get the order book using the Deribit API
 bool OrderManager::GetOrderBook(const std::string& instrument_name, std::string& response) const
 {
     const auto req = drogon::HttpRequest::newHttpRequest();
@@ -266,6 +271,7 @@ bool OrderManager::GetOrderBook(const std::string& instrument_name, std::string&
     return true;
 }
 
+// Function to get the current positions using the Deribit API
 bool OrderManager::GetCurrentPositions(const std::string& currency, const std::string& kind,
                                        std::string& response) const
 {
@@ -311,6 +317,7 @@ bool OrderManager::GetCurrentPositions(const std::string& currency, const std::s
     return true;
 }
 
+// Function to get the open orders using the Deribit API
 bool OrderManager::GetOpenOrders(std::string& response) const
 {
     const auto req = drogon::HttpRequest::newHttpRequest();

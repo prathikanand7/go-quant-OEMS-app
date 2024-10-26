@@ -30,16 +30,19 @@ TokenManager::TokenManager(const std::string& access_token_file, const std::stri
     token_expiry_time = std::chrono::system_clock::now() + std::chrono::seconds(expires_in);
 }
 
+// Function to return the access token
 const std::string& TokenManager::GetAccessToken() const
 {
     return m_access_token;
 }
 
+// Function to check if the access token has expired
 bool TokenManager::IsAccessTokenExpired() const
 {
     return std::chrono::system_clock::now() >= token_expiry_time;
 }
 
+// Function to refresh the access token using the refresh token
 bool TokenManager::RefreshAccessToken(const std::string& client_id, const std::string& client_secret)
 {
     std::cout << "Refreshing access token using refresh token...\n";
@@ -76,6 +79,7 @@ bool TokenManager::RefreshAccessToken(const std::string& client_id, const std::s
     return false;
 }
 
+// Function to update the access and refresh tokens
 void TokenManager::UpdateTokens(const std::string& new_access_token, const std::string& new_refresh_token,
                                 const int& expires_in)
 {
