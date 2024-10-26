@@ -1,7 +1,6 @@
 #include "order_manager.h"
 
 #include <cstdio>
-#include <ctime>
 #include <iostream>
 
 #include <drogon/drogon.h>

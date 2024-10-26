@@ -20,26 +20,6 @@ int main()
 
     try
     {
-        //WebSocketClient ws_client;
-
-        //// Connect to WebSocket and subscribe
-        //ws_client.connect();
-        //ws_client.subscribeToTicker("ETH-PERPETUAL",
-        //                            [](const std::string& data)
-        //                            {
-        //                                std::cout << "Real-time ticker data: " << data << std::endl;
-        //                            });
-
-        //// Run WebSocket in a separate thread
-        //std::thread ws_thread(
-        //    [&ws_client]()
-        //    {
-        //        ws_client.run();
-        //    });
-
-        // Initialize ApiCredentials
-        //const ApiCredentials credentials("api_key.txt", "api_secret.txt");
-
         // Initialize TokenManager with access_token, refresh_token, and expiry time
         TokenManager token_manager("access_token.txt", "refresh_token.txt", 2505599);
 
@@ -52,8 +32,8 @@ int main()
 
         // Place an order
         order_manager.PlaceOrder(params, "buy", response);    // Open order
-        order_manager.PlaceOrder(params1, "sell", response);  // Open order
-        order_manager.PlaceOrder(params1, "buy", response);   // Fill order
+        order_manager.PlaceOrder(params1, "sell", response);  // Fill  order
+        order_manager.PlaceOrder(params1, "buy", response);   // Open order
 
         // Modify and cancel orders
         order_manager.ModifyOrder("ETH-14308636889", 4.0, 2200.0, response);
@@ -66,10 +46,13 @@ int main()
 
         std::cout << "Press any key to exit...\n";
 
+        // Create a WebSocket client and connect to the server
+        /*const auto ws_client = std::make_unique<DrogonWebSocket>();
+        ws_client->ConnectToServer("ETH-PERPETUAL");*/
+
         // Start the Drogon event loop in the main thread
         drogon::app().run();
         _getch();
-        //ws_thread.join();
     }
     catch (const std::exception& e)
     {

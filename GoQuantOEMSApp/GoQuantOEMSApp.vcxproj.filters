@@ -27,12 +27,6 @@
     <ClCompile Include="token_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="latency_tracker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="system_optimizer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="web_socket_client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,12 +42,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="token_manager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="latency_tracker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="system_optimizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="web_socket_client.h">

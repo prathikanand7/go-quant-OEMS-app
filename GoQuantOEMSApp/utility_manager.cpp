@@ -5,7 +5,8 @@
 // Signal handler function
 void UtilityManager::HandleExitSignal(const int signal)
 {
-    std::cout << "Exit signal received: " << signal << ". Shutting down Drogon..." << std::endl;
+    std::cout << "Exit signal received: " << signal << ". Shutting down Drogon..."
+              << "\n";
     drogon::app().quit();  // Stop Drogon's event loop
 }
 
@@ -35,12 +36,12 @@ void UtilityManager::DisplayJsonResponse(const std::string& response)
                       << "Price: " << order["price"].asDouble() << ", "
                       << "Time in Force: " << order["time_in_force"].asString() << ", "
                       << "Creation UTC Timestamp: "
-                      << DisplayFormattedTimestamp(order["creation_timestamp"].asInt64()) << "\n";
+                      << DisplayFormattedTimestamp(order["creation_timestamp"].asInt64()) << "\n\n";
         }
         // Handle CancelOrder response
         else if (result.isObject() && result.isMember("order_id"))
         {
-            std::cout << "Cancelled Order ID: " << result["order_id"].asString() << "\n";
+            std::cout << "Cancelled Order ID: " << result["order_id"].asString() << "\n\n";
         }
         // Handle GetOpenOrders response
         else if (result.isArray())
@@ -115,7 +116,7 @@ void UtilityManager::DisplayCurrentPositionsJson(const std::string& response)
                       << "Initial Margin: " << position["initial_margin"].asDouble() << ", "
                       << "Open Orders Margin: " << position["open_orders_margin"].asDouble() << ", "
                       << "Timestamp: " << DisplayFormattedTimestamp(position["creation_timestamp"].asInt64())
-                      << "\n";
+                      << "\n\n";
         }
     }
     else
@@ -171,6 +172,7 @@ void UtilityManager::DisplayOrderBookJson(const std::string& response)
     {
         std::cerr << "Unexpected JSON structure for order book data.\n";
     }
+    std::cout << "\n";
 }
 
 bool UtilityManager::IsParseJsonGood(const std::string& response, Json::Value& json_data)

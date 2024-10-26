@@ -10,7 +10,7 @@ class TokenManager
     std::string m_refresh_token;
     std::chrono::system_clock::time_point token_expiry_time;
 
-    std::string ReadTokenFromFile(const std::string& file_path);
+    static std::string ReadTokenFromFile(const std::string& file_path);
 
   public:
     TokenManager(const std::string& access_token_file, const std::string& refresh_token_file,

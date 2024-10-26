@@ -130,19 +130,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="api_credentials.cpp" />
-    <ClCompile Include="latency_tracker.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="order_manager.cpp" />
-    <ClCompile Include="system_optimizer.cpp" />
     <ClCompile Include="token_manager.cpp" />
     <ClCompile Include="utility_manager.cpp" />
     <ClCompile Include="web_socket_client.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="api_credentials.h" />
-    <ClInclude Include="latency_tracker.h" />
     <ClInclude Include="order_manager.h" />
-    <ClInclude Include="system_optimizer.h" />
     <ClInclude Include="token_manager.h" />
     <ClInclude Include="utility_manager.h" />
     <ClInclude Include="web_socket_client.h" />
