@@ -31,9 +31,6 @@ struct OrderParams
     std::string label;            // Client order ID
     OrderType type;               // Order type
     std::string time_in_force;    // "good_til_cancelled", "fill_or_kill" "immediate_or_cancel"
-    bool reduce_only{false};      // Optional, for futures/options
-    double trigger_price{0};      // Required for stop orders
-    bool post_only{false};        // Optional
 };
 
 class OrderManager
@@ -59,4 +56,5 @@ class OrderManager
     bool GetOrderBook(const std::string& instrument_name, std::string& response) const;
     bool GetCurrentPositions(const std::string& currency, const std::string& kind,
                              std::string& response) const;
+    bool GetOpenOrders(std::string& response) const;
 };

@@ -1,9 +1,12 @@
 #include "order_manager.h"
 
 #include <cstdio>
+#include <ctime>
 #include <iostream>
 
 #include <drogon/drogon.h>
+
+#include "utility_manager.h"
 
 OrderManager::OrderManager(TokenManager& token_manager)
     : m_client(drogon::HttpClient::newHttpClient(BASE_URL)),
@@ -103,34 +106,25 @@ bool OrderManager::PlaceOrder(const OrderParams& params, const std::string& side
     req->addHeader("Authorization", m_auth_prefix + access_token);
     req->addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    //std::cout << "Request path: " << req->path() << "\n";
-    //std::cout << "Auth header: " << m_auth_prefix + access_token << "\n";
-    //std::cout << "2. Sending request to: " << req->path() << "\nHeaders:\n";
     m_client->sendRequest(
         req,
         [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
         {
-            //std::cout << "3. Response received!\n";
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
-                //std::cout << "4. Success! Body length: " << http_response->body().length() << "\n";
-                //std::cout << "Response: " << std::string{http_response->getBody()} << "\n";
                 response = http_response->body();
+                std::cout << "Placed Order:\n";
+                UtilityManager::DisplayJsonResponse(response);
             }
             else
             {
                 std::cout << "4. Failed! Status: " << (http_response ? http_response->getStatusCode() : 0)
                           << '\n';
+                std::cout << "Response: " << (http_response ? http_response->body() : "No response body")
+                          << '\n';
                 response = "Failed to place order";
             }
-            //std::cout << "5. Quitting app...\n";
-            drogon::app().quit();
         });
-    // Wait for the request to complete
-
-    std::cout << "6. About to run event loop...\n";
-    drogon::app().run();
-    std::cout << "7. Event loop finished\n";
 
     return true;
 }
@@ -175,6 +169,7 @@ bool OrderManager::CancelOrder(const std::string& order_id, std::string& respons
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
                 response = http_response->body();
+                UtilityManager::DisplayJsonResponse(response);
             }
             else
             {
@@ -184,9 +179,7 @@ bool OrderManager::CancelOrder(const std::string& order_id, std::string& respons
                           << '\n';
                 response = "Failed to cancel order";
             }
-            drogon::app().quit();
         });
-    drogon::app().run();
     return true;
 }
 
@@ -232,6 +225,8 @@ bool OrderManager::ModifyOrder(const std::string& order_id, const double& new_am
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
                 response = http_response->body();
+                std::cout << "Modified Order:\n";
+                UtilityManager::DisplayJsonResponse(response);
             }
             else
             {
@@ -241,10 +236,7 @@ bool OrderManager::ModifyOrder(const std::string& order_id, const double& new_am
                           << '\n';
                 response = "Failed to modify order";
             }
-            drogon::app().quit();
         });
-
-    drogon::app().run();
     return true;
 }
 
@@ -264,17 +256,14 @@ bool OrderManager::GetOrderBook(const std::string& instrument_name, std::string&
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
                 response = http_response->body();
+                UtilityManager::DisplayOrderBookJson(response);
             }
             else
             {
                 std::cerr << "Failed to get Order Book.\n";
                 response = "Failed to get Order Book";
             }
-            drogon::app().quit();
         });
-
-    // Run the event loop
-    drogon::app().run();
     return true;
 }
 
@@ -307,21 +296,48 @@ bool OrderManager::GetCurrentPositions(const std::string& currency, const std::s
     // Send the request
     m_client->sendRequest(
         req,
-        [&](drogon::ReqResult result, const drogon::HttpResponsePtr& http_response)
+        [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
         {
             if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
             {
                 response = http_response->body();
+                UtilityManager::DisplayCurrentPositionsJson(response);
             }
             else
             {
                 std::cerr << "Failed to get positions.\n";
                 response = "Failed to get positions";
             }
-            drogon::app().quit();
         });
+    return true;
+}
 
-    // Run the event loop
-    drogon::app().run();
+bool OrderManager::GetOpenOrders(std::string& response) const
+{
+    const auto req = drogon::HttpRequest::newHttpRequest();
+    req->setMethod(drogon::Get);
+    req->setPath("/api/v2/private/get_open_orders");
+    req->addHeader("Authorization", "Bearer " + m_token_manager.GetAccessToken());
+    req->addHeader("Content-Type", "application/json");
+
+    m_client->sendRequest(
+        req,
+        [&](const drogon::ReqResult& result, const drogon::HttpResponsePtr& http_response)
+        {
+            if (result == drogon::ReqResult::Ok && http_response->getStatusCode() == drogon::k200OK)
+            {
+                response = http_response->body();
+                std::cout << "Open Orders:\n";
+                UtilityManager::DisplayJsonResponse(response);
+            }
+            else
+            {
+                std::cerr << "HTTP Status Code: " << (http_response ? http_response->getStatusCode() : 0)
+                          << '\n';
+                std::cerr << "Response Body: " << (http_response ? http_response->body() : "No response body")
+                          << '\n';
+                response = "Failed to get open orders";
+            }
+        });
     return true;
 }
